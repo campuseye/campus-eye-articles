@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>All Articles - Campus Eye</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#f9f9fb; color:#1a1a1a; line-height:1.6; padding:1rem; }
+    .container { max-width:900px; margin:2rem auto; }
+    header { text-align:center; padding:2rem 1rem; background:#1a73e8; color:white; border-radius:20px; margin-bottom:2rem; }
+    h1 { font-size:2rem; }
+    .articles { display:grid; gap:1.5rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+    .card { background:white; border-radius:16px; overflow:hidden; box-shadow:0 6px 20px rgba(0,0,0,0.08); }
+    .card img { width:100%; height:160px; object-fit:cover; }
+    .card-content { padding:1rem; }
+    .card h3 { font-size:1.1rem; margin-bottom:0.4rem; }
+    .card p { font-size:0.9rem; color:#555; }
+    .author { display:flex; align-items:center; gap:0.5rem; margin-top:0.8rem; font-size:0.85rem; color:#1a73e8; font-weight:600; }
+    .author img { width:28px; height:28px; border-radius:50%; border:2px solid #1a73e8; }
+    .loading, .empty { text-align:center; padding:3rem; font-size:1.1rem; color:#666; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Campus Eye Articles</h1>
+      <p>All published stories</p>
+    </header>
+    <div id="articlesGrid" class="articles">
+      <div class="loading">Loading...</div>
+    </div>
+  </div>
+
+  <script>
+    const API = 'https://api.github.com/repos/campuseye/campus-eye-articles/contents';
+    const BASE = 'https://campuseye.github.io/campus-eye-articles';
+
+    async function load() {
+      const grid = document.getElementById('articlesGrid');
+      try {
+        const res = await fetch(API);
+        const files = await res.json();
+        const htmls = files.filter(f => f.name.endsWith('.html') && f.name !== 'index.html');
+        if (!htmls.length) { grid.innerHTML = '<div class="empty">No articles yet.</div>'; return; }
+
+        grid.innerHTML = '';
+        for (const f of htmls) {
+          const url = `${BASE}/${f.name}`;
+          const articleRes = await fetch(url);
+          if (!articleRes.ok) continue;
+          const text = await articleRes.text();
+
+          const title = text.match(/<title>([^<]+) - Campus Eye<\/title>/)?.[1] || f.name.replace('.html', '').replace(/-/g, ' ');
+          const desc = text.match(/<meta property="og:description" content="([^"]+)"/)?.[1] || 'Read more...';
+          const img = text.match(/<meta property="og:image" content="([^"]+)"/)?.[1] || 'https://picsum.photos/600/400';
+          const author = text.match(/by ([^<]+)<\/span>/)?.[1] || 'Campus Eye';
+          const authorImg = text.match(/<img src="([^"]+)" alt="[^"]*" class="[^"]*">/)?.[1] || `https://ui-avatars.com/api/?name=${author}&background=1a73e8&color=fff&bold=true&size=64`;
+
+          const card = document.createElement('a');
+          card.href = url; card.target = '_blank'; card.className = 'card';
+          card.innerHTML = `
+            <img src="${img}" alt="${title}" onerror="this.src='https://picsum.photos/600/400?blur=1'">
+            <div class="card-content">
+              <h3>${title}</h3>
+              <p>${desc}</p>
+              <div class="author">
+                <img src="${authorImg}" alt="${author}">
+                <span>${author}</span>
+              </div>
+            </div>
+          `;
+          grid.appendChild(card);
+        }
+      } catch { grid.innerHTML = '<div class="empty">Failed to load.</div>'; }
+    }
+    load();
+  </script>
+</body>
+</html>
